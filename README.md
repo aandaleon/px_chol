@@ -11,7 +11,7 @@ In between these steps, imputation occured following the pipelines on the respec
 05_qqman_GEMMA.r - creates QQ and Manhattan plot results for GEMMA output. Warning: each command takes a long time depending on the # of SNPs.  
 06_runMetaXcan.r - double loop that runs MetaXcan in all tissues for all phenotypes.  
 07_find_sig_genes.r - scans all MetaXcan outputs for genes w/ p-value lower than an adjustable threshold and writes them to a .csv.  
-08_MX_manhattan.r - creates a Manhattan plot for MetaXcan results (genes instead of SNPs plotted).  
+08_qqman_MX.r - creates a Manhattan and QQ plot for MetaXcan results (genes instead of SNPs plotted).  
 09a_Sanger_vcf2px.py/09b_UMich_vcf2px.py - converts vcf to PrediXcan dosage format post-imputation, keeping SNPs r2 > 0.8 and MAF > 0.01.  
 10_make_pred_exp.r - loop to create predicted expression files for each tissue.  
 11_pred_exp_dotplot.r - makes a dotplot for observed phenotype vs. predicted expression of a gene.  
