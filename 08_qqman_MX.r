@@ -25,7 +25,7 @@ for(k in sig_genes_Cebu$pheno){
     manhattan(GWAS, suggestiveline = 0, genomewideline = threshold)
     dev.off()
     
-    pdf(file = file = '/home/angela/MetaXcan-master/GEMMA_Cebu/Mich/' %&% l %&% '/qq_' %&% k %&%'.pdf')
+    pdf(file = '/home/angela/MetaXcan-master/GEMMA_Cebu/Mich/' %&% l %&% '/qq_' %&% k %&%'.pdf')
     qq(GWAS$P)
     dev.off()
   }
