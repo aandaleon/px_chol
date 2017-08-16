@@ -1,7 +1,7 @@
 "%&%" = function(a,b) paste(a,b,sep="")
 library(XPEB2)
 library(data.table)
-anno <- fread('/home/angela/px_glgc_chol/anno.txt')
+anno <- fread('/home/angela/px_glgc_chol/anno.txt') #used to convert chr:bp to rs
 colnames(anno) <- c("rs", "BP", "CHR", "x")
 pheno <- c("CHOL", "HDL", "TRIG", "LDL")
 
