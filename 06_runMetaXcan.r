@@ -9,5 +9,3 @@ for (i in pheno_name){
     system(MetaXcan)
   }
 }
-
-#for whatever reason GEMMA switched A0 and A1 so we switch them back in MetaXcan
