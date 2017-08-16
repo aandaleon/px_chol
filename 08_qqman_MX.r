@@ -1,12 +1,12 @@
-#creates a Manhattan for MetaXcan results
+#creates a manhattan and qq for MetaXcan results
 "%&%" = function(a,b) paste(a,b,sep="")
 library(readr)
 library(data.table)
 library(dplyr)
-source("/home/angela/px_yri_chol/GWAS/qqman.r")
+source("/home/angela/forJournals/GWAS/qqman.r")
 
 sig_genes_Cebu <- read.table("/home/angela/MetaXcan-master/GEMMA_Cebu/Mich/sig_genes.csv", header = T, sep = ',')
-BP_Chrome <- read.table("/home/angela/px_yri_chol/PrediXcan/BP_Chrome.txt", header = T) #file that assigns a BP and CHR to genes based on their starting position
+BP_Chrome <- read.table("/home/angela/px_yri_chol/PrediXcan/BP_Chrome.txt", header = T)
 BP_Chrome <- transform(BP_Chrome, CHR=as.numeric(CHR))
 BP_Chrome <- transform(BP_Chrome, BP=as.numeric(BP))
 BP_Chrome$gene <- gsub("\\..*","",BP_Chrome$gene)
@@ -23,6 +23,10 @@ for(k in sig_genes_Cebu$pheno){
 
     pdf(file = '/home/angela/MetaXcan-master/GEMMA_Cebu/Mich/' %&% l %&% '/man_' %&% k %&%'.pdf')
     manhattan(GWAS, suggestiveline = 0, genomewideline = threshold)
+    dev.off()
+    
+    pdf(file = file = '/home/angela/MetaXcan-master/GEMMA_Cebu/Mich/' %&% l %&% '/qq_' %&% k %&%'.pdf')
+    qq(GWAS$P)
     dev.off()
   }
 }
