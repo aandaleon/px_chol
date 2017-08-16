@@ -1,0 +1,198 @@
+---
+title: "QC Plots px_yri_chol"
+author: "Angela Andaleon"
+output: html_document
+---
+###Based on https://github.com/WheelerLab/GWAS_QC/blob/master/example_pipelines/TCS_GWAS_QC/03_GWAS_QC_plots.Rmd
+
+###Load packages, functions
+```{r load, message=FALSE}
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+"%&%" = function(a,b) paste (a,b,sep="")
+```
+
+###Call rate distributions
+
+```{r callrate}
+##Following QCStep1
+##displays the distribution of proportion of SNPs (F_MISS) missing in the sample
+lmiss <- read.table("/home/angela/px_yri_chol/QC/QCStep1/QCStep1.lmiss", header=T)
+hist(lmiss$F_MISS)
+  ##Output in /home/angela/px_yri_chol/QC/QC_Plots/callRateDistributions.pdf
+##Beginning SNP count
+dim(lmiss)[1]
+##SNPs with call rates > 99%
+table(lmiss$F_MISS<0.01)
+##percent SNPs with call rates > 99%
+table(lmiss$F_MISS<0.01)/sum(table(lmiss$F_MISS<0.01))
+```
+
+##Call rate distributions for individuals after removing SNPs with < 99% call rates
+
+``````{r new callrate}
+##Following QCStep3
+imiss <- read.table("/home/angela/px_yri_chol/QC/QCStep3/QCStep3.imiss", header = T)
+hist(imiss$F_MISS)
+  ##Output in 
+##Now plot SNPs with > 99% call rates
+newlmiss <- read.table("/home/angela/px_yri_chol/QC/QCStep3/QCStep3.lmiss", header = T)
+hist(newlmiss$F_MISS)
+  ##Output in
+##SNP and individual count after rm low-call SNPs
+dim(newlmiss)[1]
+dim(imiss)[1]
+
+```
+
+###Calculate HWE statistics
+
+```{r hwe}
+##Following QCStep4
+hwe <- read.table("/home/angela/px_yri_chol/QC/QCStep4/QCStep4.hwe", header = T)
+summary(hwe$P)
+hist(hwe$P)
+  ##Output in /home/angela/px_yri_chol/QC/QC_Plots/HWE.pdf
+##SNPs w/ HWE p < 1e-6
+table(hwe$P<1e-06)
+##percent SNPs w/ HWE p < 1e-6
+table(hwe$P<1e-06)/sum(table(hwe$P<1e-06))
+```
+
+###Check identity by descent (ibd)
+
+```{r ibd}
+##Following QCStep5b
+ibd <- read.table("/home/angela/px_yri_chol/QC/QCStep5/QCStep5b/QCStep5b.genome", header = T)
+ggplot(data=ibd,aes(x=Z0,y=Z1))+geom_point(alpha=1/4)+theme_bw()
+  ##Output in /home/angela/px_yri_chol/QC/QC_Plots/IBD.pdf
+##pull duplicates
+dups <- data.frame()
+for(i in 1:dim(ibd)[1]){
+  if(as.character(ibd$IID1[i]) == as.character(ibd$IID2[i])){
+    dups <- rbind(dups,ibd[i,])
+  }
+}
+dim(dups)
+##Note and pull duplicates and missings
+##In this example, there are neither duplicates nor missings
+toExclude <- as.character(dups$IID1)
+a <- as.character(ibd$IID1) %in% toExclude
+others <- ibd[a==FALSE,]
+dim(others)
+hist(others$PI_HAT)
+  ##Output in /home/angela/px_yri_chol/QC/QC_Plots/ibd_PI_HAT.pdf
+sortOthers <- others[order(others$PI_HAT, decreasing = TRUE),]
+##Unexpected duplicates:
+filter(others,PI_HAT>=0.2)
+write.table(filter(others,PI_HAT>=0.25), "/home/angela/px_yri_chol/QC/QCStep5/QCStep5b/related.to.remove.txt", quote = FALSE, row.names = FALSE)
+##No rerun in this example b/c no duplicates or missings
+```
+
+###Check heterozygosity
+
+```{r het}
+##Following QCStep5c
+HET <- read.table("/home/angela/px_yri_chol/QC/QCStep5/QCStep5c/QCStep5c.het", header = T, as.is = T)
+H = (HET$N.NM.-HET$O.HOM.)/HET$N.NM.
+oldpar = par(mfrow=c(1,2))
+hist(H,50)
+hist(HET$F,50)
+abline(v=mean(HET$F)+6*sd(HET$F),col="red")
+abline(v=mean(HET$F)-6*sd(HET$F),col="red")
+  #Output in /home/angela/px_yri_chol/QC/QC_Plots/Heterozygosity.pdf
+summary(HET$F)
+par(oldpar)
+
+sortHET <- HET[order(HET$F),]
+outliers <- data.frame()
+
+for(i in 1:length(sortHET$F)){
+  if(sortHET[i,6] > (mean(sortHET$F)+3*sd(sortHET$F))){
+    outliers <- rbind(outliers, sortHET[i,])
+  }
+  if(sortHET[i,6] < (mean(sortHET$F)-3*sd(sortHET$F))){
+    outliers <- rbind(outliers, sortHET[i,])
+  }
+}
+hetoutliers <- select(outliers, FID, IID)
+dim(hetoutliers)
+allexclude2 <- hetoutliers
+write.table(allexclude2, file = "/home/angela/px_yri_chol/QC/QCStep5/QCStep5c/QCStep5c.txt", quote = F, col.names = F, row.names = F)
+
+#Individuals left after removing heterozygosity outliers
+dim(imiss)[1]-dim(hetoutliers)[1]
+```
+
+###PCA Plots with HapMap3 unrelateds
+
+```{r pca} 
+###NEEDS A LOT OF WORK
+hapmappopinfo <- read.table("/home/wheelerlab1/Data/HAPMAP3_hg19/pop_HM3_hg19_forPCA.txt") %>% select (V1,V3)
+colnames(hapmappopinfo) <- c("pop","IID")
+fam <- read.table("/home/angela/px_yri_chol/QC/QCStep6/QCStep6e/QCStep6e.fam") %>% select (V1,V2)
+colnames(fam) <- c("FID","IID")
+popinfo <- left_join(fam,hapmappopinfo,by="IID")
+popinfo <- mutate(popinfo, pop=ifelse(is.na(pop),'GWAS', as.character(pop)))
+table(popinfo$pop)
+pcs <- read.table("/home/angela/px_yri_chol/QC/QCStep6/QCStep6e/QCStep6e.evec",skip=1)
+pcdf <- data.frame(popinfo, pcs[,2:11]) %>% rename (PC1=V2,PC2=V3,PC3=V4,PC4=V5,PC5=V6,PC6=V7,PC7=V8,PC8=V9,PC9=V10,PC10=V11)
+gwas <- filter(pcdf,pop=='GWAS')
+hm3 <- filter(pcdf, grepl('NA',IID))
+eval <- scan('/home/angela/px_yri_chol/QC/QCStep6/QCStep6e/QCStep6e.eval')[1:10]
+round(eval/sum(eval),3)
+```
+
+###PCA Plot 1 (PC1 vs PC2)
+
+```{r PCA Plot1}
+ggplot() + geom_point(data=gwas,aes(x=PC1,y=PC2,col=pop,shape=pop))+geom_point(data=hm3,aes(x=PC1,y=PC2,col=pop,shape=pop))+ theme_bw() + scale_colour_brewer(palette="Set1")
+	##Output in /home/angela/px_yri_chol/QC/QC_Plots/PC_Plots/PCA-1.pdf
+```
+
+###PCA Plot 2 (PC1 vs PC3)
+
+```{r PCA Plot2}
+ggplot() + geom_point(data=gwas,aes(x=PC1,y=PC3,col=pop,shape=pop))+geom_point(data=hm3,aes(x=PC1,y=PC3,col=pop,shape=pop))+ theme_bw() + scale_colour_brewer(palette="Set1")
+  ##Output in /home/angela/px_yri_chol/QC/QC_Plots/PC_Plots/PCA-2.pdf
+```
+
+###PCA Plot 1 (PC2 vs PC3)
+
+```{r PCA Plot3}
+ggplot() + geom_point(data=gwas,aes(x=PC2,y=PC3,col=pop,shape=pop))+geom_point(data=hm3,aes(x=PC2,y=PC3,col=pop,shape=pop))+ theme_bw() + scale_colour_brewer(palette="Set1")
+	##Output in /home/angela/px_yri_chol/QC/QC_Plots/PC_Plots/PCA-3.pdf
+```
+
+###PCA with HAPMAP populations
+
+```{r PCA with HAPMAP}
+yri <- filter(pcdf,pop=='YRI')
+uPC1 <- mean(yri$PC1) + 5*sd(yri$PC1)
+lPC1 <- mean(yri$PC1) - 5*sd(yri$PC1)
+uPC2 <- mean(yri$PC2) + 5*sd(yri$PC2)
+lPC2 <- mean(yri$PC2) - 5*sd(yri$PC2)
+ggplot() + geom_point(data=gwas,aes(x=PC1,y=PC2,col=pop,shape=pop))+geom_point(data=hm3,aes(x=PC1,y=PC2,col=pop,shape=pop))+ theme_bw() +geom_vline(xintercept=c(uPC1,lPC1)) +geom_hline(yintercept=c(uPC2,lPC2))
+	##Output in /home/angela/px_yri_chol/QC/QC_Plots/PC_Plots/PCA-4.pdf
+
+inclusion <- gwas[gwas$PC1 >= lPC1,]
+inclusion <- inclusion[inclusion$PC1 <= uPC1,]
+inclusion <- inclusion[inclusion$PC2 >= lPC2,]
+inclusion <- inclusion[inclusion$PC2 <= uPC2,]
+samples <- inclusion[,1:2]
+table(inclusion$pop)
+
+dim(samples)[1]
+dim(gwas)[1]-dim(samples)[1]
+
+ggplot() + geom_point(data=gwas,aes(x=PC1,y=PC2,col=gwas$IID %in% samples$IID,shape=gwas$IID %in% samples$IID))+geom_point(data=hm3,aes(x=PC1,y=PC2,col=pop,shape=pop))+ theme_bw()
+	##Output in /home/angela/px_yri_chol/QC/QC_Plots/PC_Plots/PCA-5.pdf
+
+write.table(samples,"/home/angela/px_yri_chol/QC/QC_Plots/PC_Plots/GWAS_PCA.txt",quote=F,row.names=F,col.names=F)
+
+afrpcs <- read.table("/home/angela/px_yri_chol/QC/QCStep6/QCStep6e/QCStep6e.evec",skip=1)
+afrcdf <- afrpcs %>% rename(PC1=V2,PC2=V3,PC3=V4,PC4=V5,PC5=V6,PC6=V7,PC7=V8,PC8=V9,PC9=V10,PC10=V11) %>% mutate(pop=ifelse(grepl("TC",V1),"GWAS","GWAS"))
+eval <- scan("/home/angela/px_yri_chol/QC/QCStep6/QCStep6e/QCStep6e.eval")[1:10]
+round(eval/sum(eval),3)
+```
