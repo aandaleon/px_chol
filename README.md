@@ -1,4 +1,6 @@
 # px_chol
+* Summary statistics are available upon request to aandaleon@luc.edu
+
 Note: most of these filepaths are probably messed up as I've been moving and editing things along the way.
 
 01_PLINK_QC_pipeline.bash - run initial quality control pipeline on raw dbGaP data using PLINK. Run concurrently with 02_PLINK_QC_plots.Rmd.  
